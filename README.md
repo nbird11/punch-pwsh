@@ -12,8 +12,8 @@ A simple command-line punch clock for PowerShell.
     Import-Module nbird11.Punch
     ```
 
-    > [!NOTE]
-    > If you've placed the module in a standard PowerShell module path PowerShell will automatically load the module the first time you run a command from it.
+> [!NOTE]
+> If you've placed the module in a standard PowerShell module path PowerShell will automatically load the module the first time you run a command from it.
 
 ## Usage
 
