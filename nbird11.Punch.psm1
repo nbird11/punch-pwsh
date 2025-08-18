@@ -15,7 +15,7 @@ Options:
 -h, --help          - Show this help message
 -d, --debug         - Show debug information
 -y,                 - No confirmation for reset
-, --path          - Show the path rather than contents
+  , --path          - Show the path rather than contents
 "@
 }
 
@@ -55,10 +55,18 @@ function _Status {
 
     if ($state -eq 'out') {
         Write-Output "Last entry: $total_time"
-        Write-Output $total_time
     }
     else {
         Write-Output "Time so far this entry: $total_time"
+        $eight_hours = [TimeSpan]::FromHours(8)
+        if ($total_time -ge $eight_hours) {
+            Write-Output "You have already worked 8 hours today, log off soon!"
+        }
+        else {
+            $remaining_time = $eight_hours - $total_time
+            $clock_out_time = (Get-Date) + $remaining_time
+            Write-Output "Clock out at $($clock_out_time.ToString('hh:mm:ss tt')) for an 8 hour day."
+        }
         Write-Output $total_time
     }
 }
