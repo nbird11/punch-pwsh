@@ -9,13 +9,14 @@ status              - Show current status
 
 Plumbing:
 reset [-y]          - Reset the punch data storage
-xml [--path]        - Show the contents or path of the punch data storage
+xml                 - Show the contents of the punch data storage
+  path              - Output the path to the xml file
+  edit              - Edit the xml data directly in default editor
 
 Options:
 -h, --help          - Show this help message
 -d, --debug         - Show debug information
 -y,                 - No confirmation for reset
-  , --path          - Show the path rather than contents
 "@
 }
 
@@ -267,8 +268,15 @@ function punch {
             Write-Output "Punch file has been reset."
         }
         'xml' {
-            if ($args -contains '--path') {
+            if ($args -contains 'path') {
                 Write-Output $punch_file
+            }
+            elseif ($args -contains 'edit') {
+                try {
+                    code $punch_file
+                } catch {
+                    Write-Error "Could not open '$punch_file' with VSCode."
+                }
             }
             else {
                 Get-Content -Path $punch_file
