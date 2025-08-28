@@ -9,9 +9,9 @@ status              - Show current status
 
 Plumbing:
 reset [-y]          - Reset the punch data storage
-xml                 - Show the contents of the punch data storage
-  path              - Output the path to the xml file
-  edit              - Edit the xml data directly in default editor
+data                - Show the contents of the punch data storage
+  path              - Output the path to the data file
+  edit              - Edit the data directly in default editor
 
 Options:
 -h, --help          - Show this help message
@@ -267,7 +267,7 @@ function punch {
 '@
             Write-Output "Punch file has been reset."
         }
-        'xml' {
+        'data' {
             if ($args -contains 'path') {
                 Write-Output $punch_file
             }
