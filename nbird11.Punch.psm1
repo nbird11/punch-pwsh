@@ -9,6 +9,7 @@ status              - Show current status
 
 Plumbing:
 reset [-y]          - Reset the punch data storage
+
 data                - Show the contents of the punch data storage
   path              - Output the path to the data file
   edit              - Edit the data directly in default editor
