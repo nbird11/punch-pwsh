@@ -9,7 +9,6 @@ status              - Show current status
 
 Plumbing:
 reset [-y]          - Reset the punch data storage
-
 data                - Show the contents of the punch data storage
   path              - Output the path to the data file
   edit              - Edit the data directly in default editor
@@ -21,12 +20,39 @@ Options:
 "@
 }
 
+function _GetState {
+    param ()
+
+    # global $entries
+
+    if ($null -eq $entries -or $entries.ChildNodes.Count -eq 0) {
+        return 'out'
+    }
+
+    $entry = $entries.LastChild
+    if ($null -eq $entry.SelectSingleNode('end')) {
+        $breaks = $entry.SelectSingleNode('breaks')
+        if ($null -ne $breaks -and $breaks.ChildNodes.Count -gt 0) {
+            $lastBreak = $breaks.LastChild
+            if ($null -eq $lastBreak.SelectSingleNode('end')) {
+                return 'break'
+            }
+        }
+        return 'in'
+    }
+    else {
+        return 'out'
+    }
+}
+
 function _Status {
     param (
         [switch]$now
     )
 
-    $state = $stateNode.InnerText
+    # global $entries
+
+    $state = _GetState
     if ($state -ne 'break') {
         Write-Output "Punched $state$(if ($now) { " at $(Get-Date)" } else { '' })."
     }
@@ -97,7 +123,6 @@ function punch {
         New-Item -Path $punch_file -ItemType File | Out-Null
         Set-Content -Path $punch_file -Value @'
 <punch>
-  <state>out</state>
   <entries>
   </entries>
 </punch>
@@ -107,7 +132,6 @@ function punch {
     <#################################################
     # Punch data format:
     # <punch>
-    #   <state>{in | out | break}</state>
     #   <entries>
     #     <entry>
     #       <start>2025-01-01 09:00:00</start>
@@ -132,22 +156,17 @@ function punch {
     
     if ($null -eq $punch) {
         $punch = $data.CreateElement('punch')
-        $stateNode = $data.CreateElement('state')
-        $stateNode.InnerText = 'out'
-        $punch.AppendChild($stateNode) | Out-Null
         $entriesNode = $data.CreateElement('entries')
         $punch.AppendChild($entriesNode) | Out-Null
         $data.AppendChild($punch) | Out-Null
         $data.Save($punch_file)
     }
-
-    $stateNode = $punch.SelectSingleNode('state')
-    $state = $stateNode.InnerText
+    
     $entries = $punch.SelectSingleNode('entries')
-
-    Write-Debug "stateNode = $($stateNode.OuterXml)"
-    Write-Debug "state = $state"
     Write-Debug "entries = $($entries.OuterXml)"
+
+    $state = _GetState $entries
+    Write-Debug "state = $state"
 
     switch ($args[0]) {
         'in' {
@@ -158,7 +177,6 @@ function punch {
                 $entry.AppendChild($start) | Out-Null
                 $entries.AppendChild($entry) | Out-Null
 
-                $stateNode.InnerText = 'in'
                 $data.Save($punch_file) | Out-Null
                 Write-Output "Punched in at $(Get-Date)"
             }
@@ -173,7 +191,6 @@ function punch {
                 $end.InnerText = (Get-Date).ToString()
                 $entry.AppendChild($end) | Out-Null
                 
-                $stateNode.InnerText = 'out'
                 $data.Save($punch_file) | Out-Null
                 # Write-Output "Punched out at $(Get-Date)"
                 _Status -now
@@ -207,7 +224,6 @@ function punch {
                         $break.AppendChild($start) | Out-Null
                         $breaks.AppendChild($break) | Out-Null
 
-                        $stateNode.InnerText = 'break'
                         $data.Save($punch_file) | Out-Null
                         Write-Output "Break started at $(Get-Date)"
                     }
@@ -226,7 +242,6 @@ function punch {
                         $end.InnerText = (Get-Date).ToString()
                         $break.AppendChild($end) | Out-Null
 
-                        $stateNode.InnerText = 'in'
                         $data.Save($punch_file) | Out-Null
                         Write-Output "Break ended at $(Get-Date). You are now punched in."
                     }
@@ -261,7 +276,6 @@ function punch {
 
             Set-Content -Path $punch_file -Value @'
 <punch>
-  <state>out</state>
   <entries>
   </entries>
 </punch>
