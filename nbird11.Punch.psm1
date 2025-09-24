@@ -2,7 +2,7 @@ function _Usage {
     Write-Output @"
 Usage: punch <command> [subcommand] [options...]
 Porcelain:
-in                         - Punch in
+in [category]              - Punch in, optionally assigning to a category
 out                        - Punch out
 break {start|end}          - Start or end a break
 status                     - Show current status
@@ -150,7 +150,8 @@ function punch {
     #     [...]
     #   </entries>
     #   <categories>
-    #       <category name="IMS Maintenance" weeklyHours="4.0" />
+    #     <category name="IMS Maintenance" weeklyHours="4.0" />
+    #     [...]
     #   </categories>
     # </punch>
     #################################################>
@@ -177,14 +178,37 @@ function punch {
     switch ($args[0]) {
         'in' {
             if ($state -eq 'out') {
+                $category = if ($args.Length -gt 1) { $args[1] } else { "uncategorized" }
+
+                if ($category -ne "uncategorized") {
+                    $categoriesNode = $punch.SelectSingleNode('categories')
+                    $validCategories = @()
+                    if ($null -ne $categoriesNode) {
+                        $validCategories = $categoriesNode.SelectNodes('category') | ForEach-Object { $_.GetAttribute('name') }
+                    }
+
+                    if ($category -notin $validCategories) {
+                        Write-Output "Error: Category '$category' not found."
+                        if ($validCategories.Count -gt 0) {
+                            Write-Output "Defined categories are:"
+                            $validCategories | ForEach-Object { Write-Output "  - $_" }
+                        } else {
+                            Write-Output "No categories have been defined yet. Use 'punch category add ...'"
+                        }
+                        return
+                    }
+                }
+
                 $entry = $data.CreateElement('entry')
+                $entry.SetAttribute('category', $category)
+
                 $start = $data.CreateElement('start')
                 $start.InnerText = (Get-Date).ToString()
                 $entry.AppendChild($start) | Out-Null
                 $entries.AppendChild($entry) | Out-Null
 
                 $data.Save($punch_file) | Out-Null
-                Write-Output "Punched in at $(Get-Date)"
+                Write-Output "Punched in at $(Get-Date) (Category: $category)"
             }
             else {
                 Write-Output "Already punched in"

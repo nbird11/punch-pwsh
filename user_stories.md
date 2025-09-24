@@ -13,7 +13,7 @@
   * `punch category list`: Lists all configured categories and their weekly hours.
   * Categories should be stored persistently, likely in the `punch.xml` data file.
 
-### [ ] User Story 2: Punch In with a Category
+### [X] User Story 2: Punch In with a Category
 
 **As a user, I want to be able to specify a category when I punch in, so that my work time is associated with that category.**
 

@@ -48,6 +48,37 @@ Describe 'nbird11.Punch Core Functionality' {
             $status[0] | Should -Match 'Punched in'
         }
 
+        It 'should punch in with "uncategorized" by default' {
+            $output = punch in
+            $output | Should -Match 'Category: uncategorized'
+
+            $punchFile = punch data path
+            $punchXml = [xml](Get-Content $punchFile)
+            $lastEntry = $punchXml.punch.entries.LastChild
+            $lastEntry.category | Should -Be 'uncategorized'
+        }
+
+        It 'should punch in with a specified category' {
+            punch category add "Test Category" 10 | Out-Null
+            $output = punch in "Test Category"
+            $output | Should -Match 'Category: Test Category'
+
+            $punchFile = punch data path
+            $punchXml = [xml](Get-Content $punchFile)
+            $lastEntry = $punchXml.punch.entries.LastChild
+            $lastEntry.category | Should -Be 'Test Category'
+        }
+
+        It 'should fail to punch in with an invalid category' {
+            punch category add "Valid Cat" 8 | Out-Null
+            $output = punch in "Invalid Cat"
+            $output[0] | Should -Match "Error: Category 'Invalid Cat' not found."
+            $output[2] | Should -Match "Valid Cat"
+
+            $status = punch status
+            $status[0] | Should -Match 'Punched out'
+        }
+
         It 'should not allow punching in when already punched in' {
             punch in | Out-Null
             $output = punch in
