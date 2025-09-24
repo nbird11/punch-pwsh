@@ -4,6 +4,7 @@ Usage: punch <command> [subcommand] [options...]
 Porcelain:
 in [category]              - Punch in, optionally assigning to a category
 out                        - Punch out
+switch [<category>]        - Switch to a new category
 break {start|end}          - Start or end a break
 status                     - Show current status
 category {add|remove|list} - Manage categories
@@ -94,10 +95,33 @@ function _Status {
         else {
             $remaining_time = $eight_hours - $total_time
             $clock_out_time = (Get-Date) + $remaining_time
-            Write-Output "Clock out at $($clock_out_time.ToString('hh:mm:ss tt')) for an 8 hour day."
+            Write-Output "Clock out at $($clock_out_time.ToString('hh:mm tt')) for an 8 hour day."
         }
-        Write-Output $total_time
+        # Write-Output $total_time
     }
+}
+
+function _PromptForCategory {
+    param(
+        [string[]]$validCategories
+    )
+
+    if ($validCategories.Count -eq 0) {
+        return $null
+    }
+
+    Write-Output "The last session was 'uncategorized'."
+    $i = 1
+    $validCategories | ForEach-Object { Write-Output "[$i] $_"; $i++ }
+    $choice = Read-Host "Choose a category for the last session (number), or press Enter to leave as 'uncategorized'"
+    
+    if ($choice -match '^\d+$' -and [int]$choice -ge 1 -and [int]$choice -le $validCategories.Count) {
+        $chosenCategory = $validCategories[[int]$choice - 1]
+        Write-Output "Last session categorized as '$chosenCategory'."
+        return $chosenCategory
+    }
+
+    return $null
 }
 
 function punch {
@@ -213,6 +237,58 @@ function punch {
             else {
                 Write-Output "Already punched in"
             }
+        }
+        'switch' {
+            if ($state -ne 'in') {
+                Write-Output "Not punched in. Use 'punch in <category>' to start."
+                return
+            }
+            
+            $newCategory = if ($args.Length -gt 1) { $args[1] } else { "uncategorized" }
+
+            # Validate the new category if it's not uncategorized
+            if ($newCategory -ne "uncategorized") {
+                $categoriesNode = $punch.SelectSingleNode('categories')
+                $validCategories = @()
+                if ($null -ne $categoriesNode) {
+                    $validCategories = $categoriesNode.SelectNodes('category') | ForEach-Object { $_.GetAttribute('name') }
+                }
+                if ($newCategory -notin $validCategories) {
+                    Write-Output "Error: Category '$newCategory' not found."
+                    return
+                }
+            }
+
+            # Punch out the current entry
+            $currentEntry = $entries.LastChild
+            $end = $data.CreateElement('end')
+            $end.InnerText = (Get-Date).ToString()
+            $currentEntry.AppendChild($end) | Out-Null
+            
+            # Prompt to categorize if the current entry is uncategorized
+            if ($currentEntry.GetAttribute('category') -eq 'uncategorized') {
+                $categoriesNode = $punch.SelectSingleNode('categories')
+                $validCategories = @()
+                if ($null -ne $categoriesNode) {
+                    $validCategories = $categoriesNode.SelectNodes('category') | ForEach-Object { $_.GetAttribute('name') }
+                }
+                
+                $chosenCategory = _PromptForCategory -validCategories $validCategories
+                if ($null -ne $chosenCategory) {
+                    $currentEntry.SetAttribute('category', $chosenCategory)
+                }
+            }
+
+            # Punch in the new entry
+            $newEntry = $data.CreateElement('entry')
+            $newEntry.SetAttribute('category', $newCategory)
+            $start = $data.CreateElement('start')
+            $start.InnerText = (Get-Date).ToString()
+            $newEntry.AppendChild($start) | Out-Null
+            $entries.AppendChild($newEntry) | Out-Null
+
+            $data.Save($punch_file) | Out-Null
+            Write-Output "Switched to category '$newCategory'."
         }
         'out' {
             if ($state -eq 'in') {
