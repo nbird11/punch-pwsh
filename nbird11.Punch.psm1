@@ -110,18 +110,25 @@ function _PromptForCategory {
         return $null
     }
 
-    Write-Output "The last session was 'uncategorized'."
+    Write-Host "The last session was 'uncategorized'."
     $i = 1
-    $validCategories | ForEach-Object { Write-Output "[$i] $_"; $i++ }
-    $choice = Read-Host "Choose a category for the last session (number), or press Enter to leave as 'uncategorized'"
+    $validCategories | ForEach-Object { Write-Host "[$i] $_"; $i++ }
     
-    if ($choice -match '^\d+$' -and [int]$choice -ge 1 -and [int]$choice -le $validCategories.Count) {
-        $chosenCategory = $validCategories[[int]$choice - 1]
-        Write-Output "Last session categorized as '$chosenCategory'."
-        return $chosenCategory
-    }
+    while ($true) {
+        $choice = Read-Host "Choose a category for the last session (number), or press Enter to leave as 'uncategorized'"
+        
+        if ([string]::IsNullOrEmpty($choice)) {
+            return $null
+        }
 
-    return $null
+        if ($choice -match '^\d+$' -and [int]$choice -ge 1 -and [int]$choice -le $validCategories.Count) {
+            $chosenCategory = $validCategories[[int]$choice - 1]
+            Write-Host "Last session categorized as '$chosenCategory'."
+            return $chosenCategory
+        }
+        
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+    }
 }
 
 function punch {
@@ -255,6 +262,12 @@ function punch {
                 }
                 if ($newCategory -notin $validCategories) {
                     Write-Output "Error: Category '$newCategory' not found."
+                    if ($validCategories.Count -gt 0) {
+                        Write-Output "Defined categories are:"
+                        $validCategories | ForEach-Object { Write-Output "  - $_" }
+                    } else {
+                        Write-Output "No categories have been defined yet. Use 'punch category add ...'"
+                    }
                     return
                 }
             }
