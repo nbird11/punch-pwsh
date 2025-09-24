@@ -2,10 +2,11 @@ function _Usage {
     Write-Output @"
 Usage: punch <command> [subcommand] [options...]
 Porcelain:
-in                  - Punch in
-out                 - Punch out
-break {start | end} - Start or end a break
-status              - Show current status
+in                         - Punch in
+out                        - Punch out
+break {start|end}          - Start or end a break
+status                     - Show current status
+category {add|remove|list} - Manage categories
 
 Plumbing:
 reset [-y]          - Reset the punch data storage
@@ -125,6 +126,8 @@ function punch {
 <punch>
   <entries>
   </entries>
+  <categories>
+  </categories>
 </punch>
 '@
     }
@@ -146,6 +149,9 @@ function punch {
     #     </entry>
     #     [...]
     #   </entries>
+    #   <categories>
+    #       <category name="IMS Maintenance" weeklyHours="4.0" />
+    #   </categories>
     # </punch>
     #################################################>
     $data = [System.Xml.XmlDocument]::new()
@@ -260,6 +266,65 @@ function punch {
         'status' {
             _Status
         }
+        'category' {
+            if ($args.Length -lt 2) {
+                _Usage
+                return
+            }
+            $categoriesNode = $punch.SelectSingleNode('categories')
+            if ($null -eq $categoriesNode) {
+                $categoriesNode = $data.CreateElement('categories')
+                $punch.AppendChild($categoriesNode) | Out-Null
+            }
+
+            switch ($args[1]) {
+                'add' {
+                    if ($args.Length -ne 4) {
+                        Write-Output "Usage: punch category add <name> <weeklyHours>"
+                        return
+                    }
+                    $name = $args[2]
+                    $hours = $args[3]
+                    $category = $data.CreateElement('category')
+                    $category.SetAttribute('name', $name)
+                    $category.SetAttribute('weeklyHours', $hours)
+                    $categoriesNode.AppendChild($category) | Out-Null
+                    $data.Save($punch_file)
+                    Write-Output "Category '$name' added with a weekly allotment of $hours hours."
+                }
+                'remove' {
+                    if ($args.Length -ne 3) {
+                        Write-Output "Usage: punch category remove <name>"
+                        return
+                    }
+                    $name = $args[2]
+                    $categoryToRemove = $categoriesNode.SelectSingleNode("category[@name='$name']")
+                    if ($null -ne $categoryToRemove) {
+                        $categoriesNode.RemoveChild($categoryToRemove) | Out-Null
+                        $data.Save($punch_file)
+                        Write-Output "Category '$name' removed."
+                    } else {
+                        Write-Output "Category '$name' not found."
+                    }
+                }
+                'list' {
+                    $allCategories = $categoriesNode.SelectNodes('category')
+                    if ($allCategories.Count -eq 0) {
+                        Write-Output "No categories defined."
+                        return
+                    }
+                    Write-Output "Defined Categories:"
+                    foreach ($cat in $allCategories) {
+                        $name = $cat.GetAttribute('name')
+                        $hours = $cat.GetAttribute('weeklyHours')
+                        Write-Output "  - $name ($hours hours/week)"
+                    }
+                }
+                default {
+                    _Usage
+                }
+            }
+        }
         'reset' {
             $doReset = if ($args -notcontains '-y') {
                 Read-Host "$(if ($state -ne 'out') { "You are still punched in; data for current session will be lost.`n" } else { '' })Are you sure you want to reset punch data? [y/N]"
@@ -278,6 +343,8 @@ function punch {
 <punch>
   <entries>
   </entries>
+  <categories>
+  </categories>
 </punch>
 '@
             Write-Output "Punch file has been reset."
