@@ -98,3 +98,30 @@ As a user, I want to be able to enter a category by its index when punching in, 
 * **Given** the system prompts for a category on punch out, switch, or on entering an invalid category,
   **When** the system displays the list of categories,  
   **Then** each category will be numbered (starting from 1) for easy reference (e.g., `- {1} IMS Maintenance\n  - {2} IMS Enhancements\n...`).
+
+## [ ] US-0010 - Reset Specific Items of Punch Data
+
+### Description
+
+As a user, when I reset my time data, I want to specify which components of the punch data to reset.
+
+### Acceptance Criteria
+
+* **Given** the user does not indicate which components to reset,
+  **When** the system performs a reset,
+  **Then** the system will tell the user that they have not specified which components to reset.
+* **Given** the user wants to reset category data,
+  **When** the user specifies `categories` during the reset command,
+  **Then** the category data will be reset.
+* **Given** the user wants to reset time entries,
+  **When** the user specifies `entries` during the reset command,
+  **Then** the time entries will be reset.
+* **Given** the user wants to reset multiple components,
+  **When** the user specifies a comma-separated list (e.g., `categories, entries`) during the reset command,
+  **Then** all specified components will be reset.
+* **Given** the user wants to see what components can be reset,
+  **When** the user specifies `--list` during the reset command,
+  **Then** the system will display a list of components that can be reset (e.g., `categories`, `entries`).
+* **Given** the user specifies `all` during the reset command,
+  **When** the system performs the reset,
+  **Then** all components of the punch data will be reset.
