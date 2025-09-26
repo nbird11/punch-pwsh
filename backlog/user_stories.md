@@ -125,3 +125,18 @@ As a user, when I reset my time data, I want to specify which components of the 
 * **Given** the user specifies `all` during the reset command,
   **When** the system performs the reset,
   **Then** all components of the punch data will be reset.
+
+## [ ] US-0011 - Separate Tests into Multiple Files
+
+### Description
+
+As a developer, I want to organize the tests into multiple files based on their functionality, so that the test suite is easier to navigate and maintain.
+
+### Acceptance Criteria
+
+* **Given** the current test suite is in a single or two files,
+  **When** the tests are organized,
+  **Then** the tests will be separated into multiple files based on their functionality (e.g., `Punch.Category.Tests.ps1`, `Punch.Entry.Tests.ps1`, `Punch.Report.Tests.ps1`).
+* **Given** the tests are separated,
+  **When** the test suite is run,
+  **Then** the output will clearly indicate which tests belong to which functionality.
