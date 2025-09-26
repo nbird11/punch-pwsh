@@ -413,6 +413,12 @@ function punch {
                     }
                     $name = $args[2]
                     $hours = $args[3]
+
+                    if ($categoriesNode.SelectSingleNode("category[@name='$name']")) {
+                        Write-Output "Category '$name' already exists."
+                        return
+                    }
+                    
                     $category = $data.CreateElement('category')
                     $category.SetAttribute('name', $name)
                     $category.SetAttribute('weeklyHours', $hours)

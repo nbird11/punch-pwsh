@@ -74,5 +74,11 @@ Describe 'nbird11.Punch Category Functionality' {
             $output = punch category remove
             $output | Should -Match "Usage: punch category remove <name>"
         }
+
+        It 'should not add a category that already exists' {
+            punch category add "Duplicate" 4 | Out-Null
+            $output = punch category add "Duplicate" 6
+            $output | Should -Match "Category 'Duplicate' already exists."
+        }
     }
 }
