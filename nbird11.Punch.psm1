@@ -306,6 +306,21 @@ function punch {
         'out' {
             if ($state -eq 'in') {
                 $entry = $entries.LastChild
+
+                # Prompt to categorize if the current entry is uncategorized
+                if ($entry.GetAttribute('category') -eq 'uncategorized') {
+                    $categoriesNode = $punch.SelectSingleNode('categories')
+                    $validCategories = @()
+                    if ($null -ne $categoriesNode) {
+                        $validCategories = $categoriesNode.SelectNodes('category') | ForEach-Object { $_.GetAttribute('name') }
+                    }
+                    
+                    $chosenCategory = _PromptForCategory -validCategories $validCategories
+                    if ($null -ne $chosenCategory) {
+                        $entry.SetAttribute('category', $chosenCategory)
+                    }
+                }
+
                 $end = $data.CreateElement('end')
                 $end.InnerText = (Get-Date).ToString()
                 $entry.AppendChild($end) | Out-Null

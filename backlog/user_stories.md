@@ -51,7 +51,7 @@
   * Using a special value like `uncategorized` or providing an empty string for the category (e.g., `punch edit <entry_id> --category ""`) will mark the entry as having an undefined category.
   * The `punch.xml` entry will be updated to reflect the change.
 
-## [ ] User Story 6: Prompt for Category on Punch Out (US-0006)
+## [X] User Story 6: Prompt for Category on Punch Out (US-0006)
 
 **As a user, when I punch out, I want to be prompted to categorize my session if it was uncategorized, so that my time log remains accurate.**
 
