@@ -138,5 +138,5 @@ As a developer, I want to organize the tests into multiple files based on their 
   **When** the tests are organized,
   **Then** the tests will be separated into multiple files based on their functionality (e.g., `Punch.Category.Tests.ps1`, `Punch.Entry.Tests.ps1`, `Punch.Report.Tests.ps1`).
 * **Given** the tests are separated,
-  **When** the test suite is run,
-  **Then** the output will clearly indicate which tests belong to which functionality.
+  **When** the tests have BeforeAll and AfterAll blocks,
+  **Then** these blocks will be moved to a common setup file (e.g., `TestSetup.ps1`) that is imported by each test file.
