@@ -143,7 +143,7 @@ Describe 'nbird11.Punch Core Functionality' {
         It 'should not allow switching to an invalid category' {
             punch in "Cat A" | Out-Null
             $output = punch switch "Invalid Cat"
-            $output | Should -Match "Error: Category 'Invalid Cat' not found."
+            $output[0] | Should -Match "Error: Category 'Invalid Cat' not found."
         }
 
         It 'should switch from one category to another' {
@@ -181,7 +181,7 @@ Describe 'nbird11.Punch Core Functionality' {
             
             Mock _PromptForCategory { return 'Cat A' } -ModuleName 'nbird11.Punch'
             
-            $output = punch switch "Cat B"
+            punch switch "Cat B" | Out-Null
             # The output from the mocked function won't be captured here, so we check the result in the XML
             
             $punchFile = punch data path
@@ -196,7 +196,7 @@ Describe 'nbird11.Punch Core Functionality' {
             
             Mock _PromptForCategory { return $null } -ModuleName 'nbird11.Punch'
             
-            $output = punch switch "Cat B"
+            punch switch "Cat B" | Out-Null
 
             $punchFile = punch data path
             $punchXml = [xml](Get-Content $punchFile)
