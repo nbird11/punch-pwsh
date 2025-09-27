@@ -1,5 +1,5 @@
 # Import the module being tested
-$modulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'nbird11.Punch.psm1'
+$modulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Punch.psm1'
 Import-Module -Name $modulePath -Force
 
 BeforeAll {
@@ -17,10 +17,10 @@ AfterAll {
     $env:APPDATA = $script:originalAppData
     
     # Remove the module to ensure a clean state for subsequent test runs
-    Remove-Module nbird11.Punch
+    Remove-Module Punch
 }
 
-Describe 'nbird11.Punch Category Functionality' {
+Describe 'Punch Category Functionality' {
     
     BeforeEach {
         # Reset the punch data before each test to ensure isolation

@@ -1,5 +1,5 @@
 # Import the module being tested
-$modulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'nbird11.Punch.psm1'
+$modulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Punch.psm1'
 Import-Module -Name $modulePath -Force
 
 BeforeAll {
@@ -18,10 +18,10 @@ AfterAll {
     $env:APPDATA = $script:originalAppData
     
     # Remove the module to ensure a clean state for subsequent test runs
-    Remove-Module nbird11.Punch
+    Remove-Module Punch
 }
 
-Describe 'nbird11.Punch Core Functionality' {
+Describe 'Punch Core Functionality' {
     
     BeforeEach {
         # Reset the punch data before each test to ensure isolation
@@ -179,7 +179,7 @@ Describe 'nbird11.Punch Core Functionality' {
             punch in "uncategorized" | Out-Null
             Start-Sleep -Milliseconds 10
             
-            Mock _PromptForCategory { return 'Cat A' } -ModuleName 'nbird11.Punch'
+            Mock _PromptForCategory { return 'Cat A' } -ModuleName 'Punch'
             
             punch switch "Cat B" | Out-Null
             # The output from the mocked function won't be captured here, so we check the result in the XML
@@ -194,7 +194,7 @@ Describe 'nbird11.Punch Core Functionality' {
             punch in "uncategorized" | Out-Null
             Start-Sleep -Milliseconds 10
             
-            Mock _PromptForCategory { return $null } -ModuleName 'nbird11.Punch'
+            Mock _PromptForCategory { return $null } -ModuleName 'Punch'
             
             punch switch "Cat B" | Out-Null
 
@@ -232,7 +232,7 @@ Describe 'nbird11.Punch Core Functionality' {
             Start-Sleep -Milliseconds 10
 
             # We assert that the mock is not called
-            Mock _PromptForCategory { throw "Should not be called" } -ModuleName 'nbird11.Punch'
+            Mock _PromptForCategory { throw "Should not be called" } -ModuleName 'Punch'
             
             punch out | Out-Null
 
@@ -246,7 +246,7 @@ Describe 'nbird11.Punch Core Functionality' {
             punch in "uncategorized" | Out-Null
             Start-Sleep -Milliseconds 10
 
-            Mock _PromptForCategory { return 'Cat B' } -ModuleName 'nbird11.Punch'
+            Mock _PromptForCategory { return 'Cat B' } -ModuleName 'Punch'
             
             punch out | Out-Null
 
@@ -260,7 +260,7 @@ Describe 'nbird11.Punch Core Functionality' {
             punch in "uncategorized" | Out-Null
             Start-Sleep -Milliseconds 10
 
-            Mock _PromptForCategory { return $null } -ModuleName 'nbird11.Punch'
+            Mock _PromptForCategory { return $null } -ModuleName 'Punch'
             
             punch out | Out-Null
 
