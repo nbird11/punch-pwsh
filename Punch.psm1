@@ -7,6 +7,7 @@ out                        - Punch out
 switch [<category>]        - Switch to a new category
 break {start|end}          - Start or end a break
 status                     - Show current status
+report                     - Show weekly progress report
 category {add|remove|list} - Manage categories
 
 Plumbing:
@@ -206,6 +207,86 @@ function punch {
     $state = _GetState $entries
     Write-Debug "state = $state"
 
+    function _GetWeeklyReport {
+        # Get the start and end of the current week (Monday to Sunday)
+        $today = Get-Date
+        $startOfWeek = $today.Date.AddDays(-([int]$today.DayOfWeek - 1))
+        $endOfWeek = $startOfWeek.AddDays(7)
+
+        # Get all categories with their weekly hours
+        $categoriesNode = $punch.SelectSingleNode('categories')
+        $categories = @{}
+        $categoryHours = @{}
+        if ($null -ne $categoriesNode) {
+            foreach ($cat in $categoriesNode.SelectNodes('category')) {
+                $name = $cat.GetAttribute('name')
+                $hours = [double]$cat.GetAttribute('weeklyHours')
+                $categories[$name] = [TimeSpan]::Zero
+                $categoryHours[$name] = $hours
+            }
+        }
+        $categories['uncategorized'] = [TimeSpan]::Zero
+
+        # Calculate time spent in each category this week
+        foreach ($entry in $entries.SelectNodes('entry')) {
+            $entryStart = [DateTime]$entry.start
+            $entryEnd = if ($null -eq $entry.end) { Get-Date } else { [DateTime]$entry.end }
+            $category = $entry.GetAttribute('category')
+
+            # Skip entries outside current week
+            if ($entryStart -lt $startOfWeek -or $entryStart -gt $endOfWeek) {
+                continue
+            }
+
+            # Calculate total break time for this entry
+            $totalBreakTime = [TimeSpan]::Zero
+            $breaks = $entry.SelectSingleNode('breaks')
+            if ($null -ne $breaks) {
+                foreach ($break in $breaks.SelectNodes('break')) {
+                    $breakStart = [DateTime]$break.start
+                    $breakEnd = if ($null -eq $break.end) { Get-Date } else { [DateTime]$break.end }
+                    $totalBreakTime += ($breakEnd - $breakStart)
+                }
+            }
+
+            # Add the time to the category total
+            $timeSpent = ($entryEnd - $entryStart) - $totalBreakTime
+            $categories[$category] += $timeSpent
+        }
+
+        # Generate the report header
+        Write-Output "Weekly Progress Report (Week of $($startOfWeek.ToString('MM/dd/yyyy')))"
+        Write-Output "-------------------------------------------"
+
+        # Create objects for each category
+        $reportData = foreach ($cat in $categories.Keys | Sort-Object) {
+            $time = $categories[$cat]
+            $hours = [math]::Round($time.TotalHours, 1)
+            
+            if ($cat -eq 'uncategorized') {
+                [PSCustomObject]@{
+                    Category = $cat
+                    Time     = "{0,5}h" -f $hours
+                    Goal     = " <N/A>"
+                    Progress = ""
+                }
+            } else {
+                $goal = $categoryHours[$cat]
+
+                $percentage = [math]::Round(($time.TotalHours / $goal) * 100, 1)
+                [PSCustomObject]@{
+                    Category = $cat
+                    Time     = "{0,5}h" -f $hours
+                    Goal     = "{0,5}h" -f $goal
+                    Progress = "($percentage%)"
+                }
+            }
+        }
+
+        # Output the data using Format-Table with auto-sizing columns
+        $reportData | Format-Table -AutoSize
+    }
+
     switch ($args[0]) {
         'in' {
             if ($state -eq 'out') {
@@ -393,6 +474,9 @@ function punch {
         }
         'status' {
             _Status
+        }
+        'report' {
+            _GetWeeklyReport
         }
         'category' {
             if ($args.Length -lt 2) {

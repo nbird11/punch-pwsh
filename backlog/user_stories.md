@@ -32,7 +32,7 @@
   * If the entry being ended is "uncategorized", the user is prompted to select a category for it from the list of available categories.
   * This provides a seamless way to transition between categorized tasks.
 
-## [ ] User Story 4: View Weekly Progress Report (US-0004)
+## [X] User Story 4: View Weekly Progress Report (US-0004)
 
 **As a user, I want to view a report of my time spent on each category for the current week, so I can see how I'm tracking against my weekly goals.**
 
