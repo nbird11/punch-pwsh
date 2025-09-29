@@ -86,6 +86,53 @@ function _Status {
             $clock_out_time = (Get-Date) + $remaining_time
             Write-Output "Clock out at $($clock_out_time.ToString('hh:mm tt')) for an 8 hour day."
         }
+
+        # Show category progress if punched into a categorized entry with weekly goal
+        $category = $entry.GetAttribute('category')
+        if ($null -ne $category -and $category -ne 'uncategorized') {
+            $categoriesNode = $punch.SelectSingleNode('categories')
+            if ($null -ne $categoriesNode) {
+                $catNode = $categoriesNode.SelectSingleNode("category[@name='$category']")
+                if ($null -ne $catNode) {
+                    $weeklyGoal = [double]$catNode.GetAttribute('weeklyHours')
+                    
+                    # Calculate total time worked this week for this category
+                    $today = Get-Date
+                    $startOfWeek = $today.Date.AddDays(-([int]$today.DayOfWeek - 1))
+                    $endOfWeek = $startOfWeek.AddDays(7)
+                    
+                    $weeklyTime = [TimeSpan]::Zero
+                    foreach ($weekEntry in $entries.SelectNodes('entry')) {
+                        $entryCategory = $weekEntry.GetAttribute('category')
+                        if ($entryCategory -eq $category) {
+                            $entryStart = [DateTime]$weekEntry.start
+                            $entryEnd = if ($null -eq $weekEntry.end) { Get-Date } else { [DateTime]$weekEntry.end }
+                            
+                            # Skip entries outside current week
+                            if ($entryStart -lt $startOfWeek -or $entryStart -gt $endOfWeek) {
+                                continue
+                            }
+                            
+                            # Calculate break time for this entry
+                            $entryBreakTime = [TimeSpan]::Zero
+                            $breaks = $weekEntry.SelectSingleNode('breaks')
+                            if ($null -ne $breaks) {
+                                foreach ($break in $breaks.SelectNodes('break')) {
+                                    $breakStart = [DateTime]$break.start
+                                    $breakEnd = if ($null -eq $break.end) { Get-Date } else { [DateTime]$break.end }
+                                    $entryBreakTime += ($breakEnd - $breakStart)
+                                }
+                            }
+                            
+                            $weeklyTime += ($entryEnd - $entryStart) - $entryBreakTime
+                        }
+                    }
+                    
+                    $remainingHours = [math]::Max(0, $weeklyGoal - $weeklyTime.TotalHours)
+                    Write-Output "Weekly progress for '$category': $([math]::Round($weeklyTime.TotalHours, 1))h worked, $([math]::Round($remainingHours, 1))h remaining of ${weeklyGoal}h goal."
+                }
+            }
+        }
         # Write-Output $total_time
     }
 }
