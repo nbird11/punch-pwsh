@@ -73,16 +73,46 @@ function _Status {
     $total_time = ([DateTime]$end - [DateTime]$start) - $totalBreakTime
 
     if ($state -eq 'out') {
-        Write-Output "Last entry: $total_time"
+        Write-Output "Last entry: $($total_time.ToString('hh\:mm\:ss'))"
     }
     else {
-        Write-Output "Time so far this entry: $total_time"
+        Write-Output "Time so far this entry: $($total_time.ToString('hh\:mm\:ss'))"
+        
+        # Calculate total time worked today across all entries
+        $today = Get-Date
+        $todayStart = $today.Date
+        $todayEnd = $todayStart.AddDays(1)
+        
+        $totalTimeToday = [TimeSpan]::Zero
+        foreach ($dayEntry in $entries.SelectNodes('entry')) {
+            $entryStart = [DateTime]$dayEntry.start
+            $entryEnd = if ($null -eq $dayEntry.end) { Get-Date } else { [DateTime]$dayEntry.end }
+            
+            # Only count entries that started today
+            if ($entryStart -ge $todayStart -and $entryStart -lt $todayEnd) {
+                # Calculate break time for this entry (Backward compatibility [breaks deprecated])
+                $entryBreakTime = [TimeSpan]::Zero
+                $breaks = $dayEntry.SelectSingleNode('breaks')
+                if ($null -ne $breaks) {
+                    foreach ($break in $breaks.SelectNodes('break')) {
+                        $breakStart = [DateTime]$break.start
+                        $breakEnd = if ($null -eq $break.end) { Get-Date } else { [DateTime]$break.end }
+                        $entryBreakTime += ($breakEnd - $breakStart)
+                    }
+                }
+                
+                $totalTimeToday += ($entryEnd - $entryStart) - $entryBreakTime
+            }
+        }
+        
+        Write-Output "Total time worked today: $($totalTimeToday.ToString('hh\:mm\:ss'))"
+        
         $eight_hours = [TimeSpan]::FromHours(8)
-        if ($total_time -ge $eight_hours) {
+        if ($totalTimeToday -ge $eight_hours) {
             Write-Output "You have already worked 8 hours today, log off soon!"
         }
         else {
-            $remaining_time = $eight_hours - $total_time
+            $remaining_time = $eight_hours - $totalTimeToday
             $clock_out_time = (Get-Date) + $remaining_time
             Write-Output "Clock out at $($clock_out_time.ToString('hh:mm tt')) for an 8 hour day."
         }
