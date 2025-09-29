@@ -5,7 +5,6 @@ Porcelain:
 in [category]              - Punch in, optionally assigning to a category
 out                        - Punch out
 switch [<category>]        - Switch to a new category
-break {start|end}          - Start or end a break
 status                     - Show current status
 report                     - Show weekly progress report
 category {add|remove|list} - Manage categories
@@ -34,13 +33,6 @@ function _GetState {
 
     $entry = $entries.LastChild
     if ($null -eq $entry.SelectSingleNode('end')) {
-        $breaks = $entry.SelectSingleNode('breaks')
-        if ($null -ne $breaks -and $breaks.ChildNodes.Count -gt 0) {
-            $lastBreak = $breaks.LastChild
-            if ($null -eq $lastBreak.SelectSingleNode('end')) {
-                return 'break'
-            }
-        }
         return 'in'
     }
     else {
@@ -56,12 +48,7 @@ function _Status {
     # global $entries
 
     $state = _GetState
-    if ($state -ne 'break') {
-        Write-Output "Punched $state$(if ($now) { " at $(Get-Date)" } else { '' })."
-    }
-    else {
-        Write-Output "On break."
-    }
+    Write-Output "Punched $state$(if ($now) { " at $(Get-Date)" } else { '' })."
     
     $entry = $entries.LastChild
     if ($null -eq $entry) {
@@ -71,18 +58,19 @@ function _Status {
 
     $start = $entry.start
     $end = if ($null -eq $entry.end) { (Get-Date).ToString() } else { $entry.end }
+    
+    # Calculate total break time for backward compatibility with old data
+    $totalBreakTime = [TimeSpan]::Zero
     $breaks = $entry.SelectSingleNode('breaks')
-
-    $total_break_time = [TimeSpan]::Zero
     if ($null -ne $breaks) {
         foreach ($break in $breaks.SelectNodes('break')) {
             $bStart = $break.start
             $bEnd = if ($null -eq $break.end) { (Get-Date).ToString() } else { $break.end }
-            $total_break_time += ([DateTime]$bEnd - [DateTime]$bStart)
+            $totalBreakTime += ([DateTime]$bEnd - [DateTime]$bStart)
         }
     }
-
-    $total_time = ([DateTime]$end - [DateTime]$start) - $total_break_time
+    
+    $total_time = ([DateTime]$end - [DateTime]$start) - $totalBreakTime
 
     if ($state -eq 'out') {
         Write-Output "Last entry: $total_time"
@@ -238,7 +226,7 @@ function punch {
                 continue
             }
 
-            # Calculate total break time for this entry
+            # Calculate total break time for this entry (for backward compatibility with old data)
             $totalBreakTime = [TimeSpan]::Zero
             $breaks = $entry.SelectSingleNode('breaks')
             if ($null -ne $breaks) {
@@ -411,65 +399,7 @@ function punch {
                 _Status -now
             }
             else {
-                if ($state -eq 'out') { Write-Output "Already punched out" }
-                else { Write-Output "Still on break" }  # TODO: Maybe just set break end to now and punch out?
-            }
-        }
-        'break' {
-            if ($args.Length -lt 2) {
-                Write-Output "Usage: punch break {start | end}"
-                Write-Output "Use -h or --help to show full help"
-                return
-            }
-            switch ($args[1]) {
-                'start' {
-                    if ($state -eq 'in') {
-                        if ($null -eq $entries) { Write-Error "AssertionError: $entries is null. "; exit 1 }
-                        $entry = $entries.LastChild
-                        $breaks = $entry.SelectSingleNode('breaks')
-                        if ($null -eq $breaks) {
-                            $breaks = $data.CreateElement('breaks')
-                            $entry.AppendChild($breaks) | Out-Null
-                            $breaks = $entry.SelectSingleNode('breaks')
-                        }
-                        
-                        $break = $data.CreateElement('break')
-                        $start = $data.CreateElement('start')
-                        $start.InnerText = (Get-Date).ToString()
-                        $break.AppendChild($start) | Out-Null
-                        $breaks.AppendChild($break) | Out-Null
-
-                        $data.Save($punch_file) | Out-Null
-                        Write-Output "Break started at $(Get-Date)"
-                    }
-                    else {
-                        if ($state -eq 'break') { Write-Output "Already on a break." }
-                        else { Write-Output "Not punched in." }
-                    }
-                }
-                'end' {
-                    if ($state -eq 'break') {
-                        if ($null -eq $entries) { Write-Error "AssertionError: $entries is null. "; exit 1 }
-                        $entry = $entries.LastChild
-                        $break = $entry.breaks.LastChild
-                        
-                        $end = $data.CreateElement('end')
-                        $end.InnerText = (Get-Date).ToString()
-                        $break.AppendChild($end) | Out-Null
-
-                        $data.Save($punch_file) | Out-Null
-                        Write-Output "Break ended at $(Get-Date). You are now punched in."
-                    }
-                    else {
-                        if ($state -eq 'in') { Write-Output "Not on a break." }
-                        else { Write-Output "Not punched in." }
-                    }
-                }
-                default {
-                    Write-Output "Usage: punch break {start | end}"
-                    Write-Output "Use -h or --help to show full help"
-                    return
-                }
+                Write-Output "Already punched out"
             }
         }
         'status' {

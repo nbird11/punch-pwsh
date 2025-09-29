@@ -95,40 +95,6 @@ Describe 'Punch Core Functionality' {
         }
     }
 
-    Context 'Break Functionality' {
-        BeforeEach {
-            punch in | Out-Null
-        }
-
-        It 'should allow starting a break' {
-            $output = punch break start
-            $output | Should -Match 'Break started at'
-            $status = punch status
-            $status[0] | Should -Match 'On break'
-        }
-
-        It 'should not allow starting a break when already on break' {
-            punch break start | Out-Null
-            $output = punch break start
-            $output | Should -Contain 'Already on a break.'
-        }
-
-        It 'should allow ending a break' {
-            punch break start | Out-Null
-            Start-Sleep -Milliseconds 10
-            $output = punch break end
-            $output | Should -Match 'Break ended at'
-            $status = punch status
-            $status[0] | Should -Match 'Punched in'
-        }
-
-        It 'should not allow punching out while on break' {
-            punch break start | Out-Null
-            $output = punch out
-            $output | Should -Contain 'Still on break'
-        }
-    }
-
     Context 'Switch Functionality' {
         BeforeEach {
             punch category add "Cat A" 10 | Out-Null

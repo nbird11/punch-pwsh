@@ -97,5 +97,36 @@ Describe 'Punch Report Functionality' {
             $output = punch report | Out-String
             $output | Should -Match "Weekly\s+0h\s+10h\s+\(0%\)"  # Should not include the 2 hours from last week
         }
+
+        It 'should correctly calculate time with break data for backward compatibility' {
+            punch category add "Work" 40 | Out-Null
+            
+            # Create XML data with break elements (simulating old data format)
+            $punchFile = punch data path
+            $xml = @'
+<punch>
+    <entries>
+        <entry category="Work">
+            <start>2025-09-29 09:00:00</start>
+            <breaks>
+                <break>
+                    <start>2025-09-29 12:00:00</start>
+                    <end>2025-09-29 13:00:00</end>
+                </break>
+            </breaks>
+            <end>2025-09-29 17:00:00</end>
+        </entry>
+    </entries>
+    <categories>
+        <category name="Work" weeklyHours="40" />
+    </categories>
+</punch>
+'@
+            Set-Content -Path $punchFile -Value $xml
+            
+            $output = punch report | Out-String
+            # 8-hour day (9-5) minus 1-hour break should show 7 hours
+            $output | Should -Match "Work\s+7h\s+40h\s+\(17\.5%\)"
+        }
     }
 }
