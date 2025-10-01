@@ -17,8 +17,8 @@ reset {list|[<component>[,<component> ...]]} [options]
                     - Reset specific components of the punch data storage
   -y,                 - No confirmation for reset
 data                - Show the contents of the punch data storage
-  path              - Output the path to the data file
-  edit              - Edit the data directly in default editor
+  path                - Output the path to the data file
+  edit                - Edit the data directly in default editor
 
 Options:
 -h, --help          - Show this help message
