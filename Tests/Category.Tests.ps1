@@ -1,30 +1,9 @@
-# Import the module being tested
-$modulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Punch.psm1'
-Import-Module -Name $modulePath -Force
-
-BeforeAll {
-    # Create a temporary directory for test data to avoid interfering with real user data
-    $script:tempDir = New-Item -Path (Join-Path $env:TEMP (New-Guid)) -ItemType Directory
-    
-    # Override the APPDATA environment variable for the scope of these tests
-    $script:originalAppData = $env:APPDATA
-    $env:APPDATA = $script:tempDir
-}
-
-AfterAll {
-    # Clean up the temporary directory and restore the environment variable
-    Remove-Item -Path $script:tempDir -Recurse -Force
-    $env:APPDATA = $script:originalAppData
-    
-    # Remove the module to ensure a clean state for subsequent test runs
-    Remove-Module Punch
-}
+. $PSScriptRoot\TestSetup.ps1
 
 Describe 'Punch Category Functionality' {
     
     BeforeEach {
-        # Reset the punch data before each test to ensure isolation
-        punch reset -y | Out-Null
+        Reset-PunchData
     }
 
     Context 'Category Management' {
