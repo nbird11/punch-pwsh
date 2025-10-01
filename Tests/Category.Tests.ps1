@@ -38,7 +38,7 @@ Describe 'Punch Category Functionality' {
             $output | Should -Match "Category 'Test Category' added with a weekly allotment of 5.5 hours."
             
             $listOutput = punch category list
-            $listOutput[1] | Should -Match "Test Category \(5.5 hours/week\)"
+            $listOutput[1] | Should -Match "\{1\} Test Category \(5.5 hours/week\)"
         }
 
         It 'should allow removing an existing category' {
@@ -61,8 +61,8 @@ Describe 'Punch Category Functionality' {
 
             $listOutput = punch category list
             $listOutput | Should -HaveCount 3 # "Defined Categories:" + 2 category lines
-            $listOutput[1] | Should -Match "Cat 1 \(10 hours/week\)"
-            $listOutput[2] | Should -Match "Cat 2 \(2.5 hours/week\)"
+            $listOutput[1] | Should -Match "\{1\} Cat 1 \(10 hours/week\)"
+            $listOutput[2] | Should -Match "\{2\} Cat 2 \(2.5 hours/week\)"
         }
 
         It 'should show usage for incomplete add command' {

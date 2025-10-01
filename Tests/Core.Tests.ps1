@@ -93,6 +93,31 @@ Describe 'Punch Core Functionality' {
             $output[0] | Should -Match 'Punched out at'
             $output[1] | Should -Match 'Last entry: \d{2}:\d{2}:\d{2}'
         }
+
+        It 'should punch in using category index' {
+            punch category add "First Cat" 10 | Out-Null
+            punch category add "Second Cat" 15 | Out-Null
+            punch category add "Third Cat" 20 | Out-Null
+            
+            $output = punch in 2
+            $output | Should -Match 'Category: Second Cat'
+
+            $punchFile = punch data path
+            $punchXml = [xml](Get-Content $punchFile)
+            $lastEntry = $punchXml.punch.entries.LastChild
+            $lastEntry.category | Should -Be 'Second Cat'
+        }
+
+        It 'should fail to punch in with invalid category index' {
+            punch category add "Cat One" 10 | Out-Null
+            punch category add "Cat Two" 15 | Out-Null
+            
+            $output = punch in 5
+            $output[0] | Should -Match "Error: Invalid category index '5'"
+            $output[1] | Should -Match "Available categories:"
+            $output[2] | Should -Match "\{1\} Cat One"
+            $output[3] | Should -Match "\{2\} Cat Two"
+        }
     }
 
     Context 'Switch Functionality' {
@@ -139,6 +164,26 @@ Describe 'Punch Core Functionality' {
             $entries = $punchXml.punch.entries.entry
             $entries.Count | Should -Be 2
             $entries[1].category | Should -Be "uncategorized"
+        }
+
+        It 'should switch using category index' {
+            punch in "Cat A" | Out-Null
+            Start-Sleep -Milliseconds 10
+            $output = punch switch 2
+            $output | Should -Match "Switched to category 'Cat B'."
+
+            $punchFile = punch data path
+            $punchXml = [xml](Get-Content $punchFile)
+            $entries = $punchXml.punch.entries.entry
+            $entries.Count | Should -Be 2
+            $entries[1].category | Should -Be "Cat B"
+        }
+
+        It 'should fail to switch with invalid category index' {
+            punch in "Cat A" | Out-Null
+            $output = punch switch "10"
+            $output[0] | Should -Match "Error: Invalid category index '10'"
+            $output[1] | Should -Match "Available categories:"
         }
 
         It 'should prompt to categorize when switching from "uncategorized"' {

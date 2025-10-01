@@ -178,7 +178,7 @@ function _PromptForCategory {
 
     Write-Host "The last session was 'uncategorized'."
     $i = 1
-    $validCategories | ForEach-Object { Write-Host "[$i] $_"; $i++ }
+    $validCategories | ForEach-Object { Write-Host "{$i} $_"; $i++ }
     
     while ($true) {
         $choice = Read-Host "Choose a category for the last session (number), or press Enter to leave as 'uncategorized'"
@@ -364,11 +364,27 @@ function punch {
                         $validCategories = $categoriesNode.SelectNodes('category') | ForEach-Object { $_.GetAttribute('name') }
                     }
 
-                    if ($category -notin $validCategories) {
+                    # Check if input is a number (index)
+                    if ($category -match '^\d+$') {
+                        $index = [int]$category - 1
+                        if ($index -ge 0 -and $index -lt $validCategories.Count) {
+                            $category = $validCategories[$index]
+                        } else {
+                            Write-Output "Error: Invalid category index '$($args[1])'. Please use a number between 1 and $($validCategories.Count)."
+                            if ($validCategories.Count -gt 0) {
+                                Write-Output "Available categories:"
+                                $i = 1
+                                $validCategories | ForEach-Object { Write-Output "  {$i} $_"; $i++ }
+                            }
+                            return
+                        }
+                    }
+                    elseif ($category -notin $validCategories) {
                         Write-Output "Error: Category '$category' not found."
                         if ($validCategories.Count -gt 0) {
-                            Write-Output "Defined categories are:"
-                            $validCategories | ForEach-Object { Write-Output "  - $_" }
+                            Write-Output "Available categories:"
+                            $i = 1
+                            $validCategories | ForEach-Object { Write-Output "  {$i} $_"; $i++ }
                         } else {
                             Write-Output "No categories have been defined yet. Use 'punch category add ...'"
                         }
@@ -406,11 +422,28 @@ function punch {
                 if ($null -ne $categoriesNode) {
                     $validCategories = $categoriesNode.SelectNodes('category') | ForEach-Object { $_.GetAttribute('name') }
                 }
-                if ($newCategory -notin $validCategories) {
+                
+                # Check if input is a number (index)
+                if ($newCategory -match '^\d+$') {
+                    $index = [int]$newCategory - 1
+                    if ($index -ge 0 -and $index -lt $validCategories.Count) {
+                        $newCategory = $validCategories[$index]
+                    } else {
+                        Write-Output "Error: Invalid category index '$($args[1])'. Please use a number between 1 and $($validCategories.Count)."
+                        if ($validCategories.Count -gt 0) {
+                            Write-Output "Available categories:"
+                            $i = 1
+                            $validCategories | ForEach-Object { Write-Output "  {$i} $_"; $i++ }
+                        }
+                        return
+                    }
+                }
+                elseif ($newCategory -notin $validCategories) {
                     Write-Output "Error: Category '$newCategory' not found."
                     if ($validCategories.Count -gt 0) {
-                        Write-Output "Defined categories are:"
-                        $validCategories | ForEach-Object { Write-Output "  - $_" }
+                        Write-Output "Available categories:"
+                        $i = 1
+                        $validCategories | ForEach-Object { Write-Output "  {$i} $_"; $i++ }
                     } else {
                         Write-Output "No categories have been defined yet. Use 'punch category add ...'"
                     }
@@ -539,10 +572,12 @@ function punch {
                         return
                     }
                     Write-Output "Defined Categories:"
+                    $i = 1
                     foreach ($cat in $allCategories) {
                         $name = $cat.GetAttribute('name')
                         $hours = $cat.GetAttribute('weeklyHours')
-                        Write-Output "  - $name ($hours hours/week)"
+                        Write-Output "  {$i} $name ($hours hours/week)"
+                        $i++
                     }
                 }
                 default {
