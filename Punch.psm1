@@ -10,7 +10,7 @@ report                     - Show weekly progress report
 category {add|remove|list} - Manage categories
 
 Plumbing:
-reset [-y]          - Reset the punch data storage
+reset {list|[components]} [-y] - Reset specific components of the punch data storage
 data                - Show the contents of the punch data storage
   path              - Output the path to the data file
   edit              - Edit the data directly in default editor
@@ -221,10 +221,8 @@ function punch {
         New-Item -Path $punch_file -ItemType File | Out-Null
         Set-Content -Path $punch_file -Value @'
 <punch>
-  <entries>
-  </entries>
-  <categories>
-  </categories>
+  <entries />
+  <categories />
 </punch>
 '@
     }
@@ -586,8 +584,56 @@ function punch {
             }
         }
         'reset' {
-            $doReset = if ($args -notcontains '-y') {
-                Read-Host "$(if ($state -ne 'out') { "You are still punched in; data for current session will be lost.`n" } else { '' })Are you sure you want to reset punch data? [y/N]"
+            $resetArgs = @($args | Where-Object { $_ -ne 'reset' })
+            
+            if ($resetArgs.Count -gt 0 -and $resetArgs[0] -eq 'list') {
+                Write-Output "Available components to reset:"
+                Write-Output "  categories - Reset all category definitions"
+                Write-Output "  entries    - Reset all time entries"
+                Write-Output "  all        - Reset all components"
+                return
+            }
+            
+            $components = $resetArgs | Where-Object { $_ -ne '-y' }
+            if ($components.Count -eq 0) {
+                Write-Output "Error: No components specified for reset. Use 'punch reset list' to see available components."
+                return
+            }
+            
+            $resetCategories = $false
+            $resetEntries = $false
+            
+            if ($components -contains 'all') {
+                $resetCategories = $true
+                $resetEntries = $true
+            } else {
+                foreach ($comp in $components) {
+                    $parts = $comp -split ','
+                    foreach ($part in $parts) {
+                        $part = $part.Trim()
+                        if ($part -eq 'categories') {
+                            $resetCategories = $true
+                        } elseif ($part -eq 'entries') {
+                            $resetEntries = $true
+                        } else {
+                            Write-Output "Error: Unknown component '$part'. Use 'punch reset list' to see available components."
+                            return
+                        }
+                    }
+                }
+            }
+            
+            if (-not $resetCategories -and -not $resetEntries) {
+                Write-Output "Error: No valid components specified for reset."
+                return
+            }
+            
+            $doReset = if ($resetArgs -notcontains '-y') {
+                $componentList = @()
+                if ($resetCategories) { $componentList += 'categories' }
+                if ($resetEntries) { $componentList += 'entries' }
+                $componentStr = $componentList -join ' and '
+                Read-Host "$(if ($state -ne 'out') { "You are still punched in; data for current session will be lost.`n" } else { '' })Are you sure you want to reset $($componentStr)? [y/N]"
             }
             else {
                 'y'
@@ -598,16 +644,31 @@ function punch {
                 return
             }
             
-
-            Set-Content -Path $punch_file -Value @'
-<punch>
-  <entries>
-  </entries>
-  <categories>
-  </categories>
-</punch>
-'@
-            Write-Output "Punch file has been reset."
+            # Load current data
+            [xml]$data = Get-Content $punch_file
+            $punch = $data.punch
+            
+            if ($resetEntries) {
+                $entriesNode = $punch.SelectSingleNode('entries')
+                if ($null -ne $entriesNode) {
+                    $entriesNode.RemoveAll()
+                }
+            }
+            
+            if ($resetCategories) {
+                $categoriesNode = $punch.SelectSingleNode('categories')
+                if ($null -ne $categoriesNode) {
+                    $categoriesNode.RemoveAll()
+                }
+            }
+            
+            $data.Save($punch_file)
+            
+            $componentList = @()
+            if ($resetCategories) { $componentList += 'Categories' }
+            if ($resetEntries) { $componentList += 'Entries' }
+            $componentStr = $componentList -join ' and '
+            Write-Output "$componentStr have been reset."
         }
         'data' {
             if ($args -contains 'path') {
