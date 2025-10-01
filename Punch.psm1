@@ -7,10 +7,15 @@ out                        - Punch out
 switch [<category>]        - Switch to a new category
 status                     - Show current status
 report                     - Show weekly progress report
+log [<count>] [options]    - View time entry log (default count: 10)
+  --period <period>          - Filter by period: today, week, month, all
+  --date <YYYY-MM-DD>        - Filter by specific date
 category {add|remove|list} - Manage categories
 
 Plumbing:
-reset {list|[components]} [-y] - Reset specific components of the punch data storage
+reset {list|[<component>[,<component> ...]]} [options]
+                    - Reset specific components of the punch data storage
+  -y,                 - No confirmation for reset
 data                - Show the contents of the punch data storage
   path              - Output the path to the data file
   edit              - Edit the data directly in default editor
@@ -18,7 +23,6 @@ data                - Show the contents of the punch data storage
 Options:
 -h, --help          - Show this help message
 -d, --debug         - Show debug information
--y,                 - No confirmation for reset
 "@
 }
 
@@ -515,6 +519,132 @@ function punch {
         }
         'report' {
             _GetWeeklyReport
+        }
+        'log' {
+            $logArgs = @($args | Where-Object { $_ -ne 'log' })
+            
+            $count = 10
+            $period = $null
+            $specificDate = $null
+            
+            $i = 0
+            while ($i -lt $logArgs.Count) {
+                $arg = $logArgs[$i]
+                if ($arg -eq '--period') {
+                    if ($i + 1 -lt $logArgs.Count) {
+                        $period = $logArgs[$i + 1]
+                        $i += 2
+                    } else {
+                        Write-Output "Error: --period requires a value (today, week, month, all)"
+                        return
+                    }
+                } elseif ($arg -eq '--date') {
+                    if ($i + 1 -lt $logArgs.Count) {
+                        $specificDate = $logArgs[$i + 1]
+                        $i += 2
+                    } else {
+                        Write-Output "Error: --date requires a date value (YYYY-MM-DD)"
+                        return
+                    }
+                } elseif ($arg -match '^\d+$') {
+                    $count = [int]$arg
+                    $i++
+                } else {
+                    Write-Output "Error: Unknown argument '$arg'"
+                    return
+                }
+            }
+            
+            $allEntries = $entries.SelectNodes('entry')
+            if ($allEntries.Count -eq 0) {
+                Write-Output "No time entries found."
+                return
+            }
+            
+            # Filter entries
+            $filteredEntries = @()
+            foreach ($entry in $allEntries) {
+                $startTime = [DateTime]$entry.start
+                $include = $true
+                
+                if ($specificDate) {
+                    try {
+                        $date = [DateTime]::Parse($specificDate)
+                        if ($startTime.Date -ne $date.Date) {
+                            $include = $false
+                        }
+                    } catch {
+                        Write-Output "Error: Invalid date format '$specificDate'. Use YYYY-MM-DD."
+                        return
+                    }
+                } elseif ($period) {
+                    $now = Get-Date
+                    switch ($period) {
+                        'today' {
+                            if ($startTime.Date -ne $now.Date) { $include = $false }
+                        }
+                        'week' {
+                            $weekStart = $now.Date.AddDays(-[int]$now.DayOfWeek)
+                            $weekEnd = $weekStart.AddDays(6)
+                            if ($startTime.Date -lt $weekStart -or $startTime.Date -gt $weekEnd) { $include = $false }
+                        }
+                        'month' {
+                            if ($startTime.Year -ne $now.Year -or $startTime.Month -ne $now.Month) { $include = $false }
+                        }
+                        'all' {
+                            # Include all
+                        }
+                        default {
+                            Write-Output "Error: Invalid period '$period'. Use today, week, month, or all."
+                            return
+                        }
+                    }
+                }
+                
+                if ($include) {
+                    $filteredEntries += $entry
+                }
+            }
+            
+            # Take the last $count entries
+            $entriesToShow = $filteredEntries | Select-Object -Last $count
+            
+            if ($entriesToShow.Count -eq 0) {
+                Write-Output "No time entries found for the specified criteria."
+                return
+            }
+            
+            # Display entries
+            Write-Output "Time Entry Log:"
+            Write-Output ""
+            
+            $index = 1
+            foreach ($entry in $entriesToShow) {
+                $start = [DateTime]$entry.start
+                $end = if ($entry.end) { [DateTime]$entry.end } else { Get-Date }
+                $category = $entry.GetAttribute('category')
+                if (-not $category) { $category = 'uncategorized' }
+                
+                # Calculate duration
+                $duration = $end - $start
+                
+                # Subtract breaks
+                $breaks = $entry.SelectSingleNode('breaks')
+                if ($breaks) {
+                    foreach ($break in $breaks.SelectNodes('break')) {
+                        $bStart = [DateTime]$break.start
+                        $bEnd = if ($break.end) { [DateTime]$break.end } else { Get-Date }
+                        $duration = $duration - ($bEnd - $bStart)
+                    }
+                }
+                
+                $durationStr = "{0:hh\:mm\:ss}" -f $duration
+                $startStr = $start.ToString("yyyy-MM-dd HH:mm:ss")
+                $endStr = if ($entry.end) { $end.ToString("yyyy-MM-dd HH:mm:ss") } else { "ongoing" }
+                
+                Write-Output ("{0,3}. {1} - {2} ({3}) [{4}]" -f $index, $startStr, $endStr, $durationStr, $category)
+                $index++
+            }
         }
         'category' {
             if ($args.Length -lt 2) {
