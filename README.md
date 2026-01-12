@@ -35,25 +35,9 @@ To end your work session, punch out. This will display the total time worked for
 punch out
 ```
 
-### Breaks
-
-You can start and end breaks during a work session.
-
-#### Start a break
-
-```powershell
-punch break start
-```
-
-#### End a break
-
-```powershell
-punch break end
-```
-
 ### Check Status
 
-Check your current status (punched in, punched out, or on break) and the time elapsed in your current session.
+Check your current status (punched in or punched out) and the time elapsed in your current session.
 
 ```powershell
 punch status
